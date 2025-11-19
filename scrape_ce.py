@@ -59,6 +59,25 @@ class GoodPractice:
         }
 
 
+def _select_text(practice: Tag, selector: str) -> str:
+    """Return stripped text for the first element matching the CSS selector."""
+    element = practice.select_one(selector)
+    if not element:
+        return "N/A"
+    text = element.get_text(strip=True)
+    return text or "N/A"
+
+
+def _select_list_text(practice: Tag, selector: str) -> str:
+    """Return comma-separated text for all matches of the CSS selector."""
+    values = [
+        element.get_text(strip=True)
+        for element in practice.select(selector)
+        if element.get_text(strip=True)
+    ]
+    return ", ".join(values) if values else "N/A"
+
+
 def parse_practice_card(practice: Tag) -> GoodPractice:
     """Extract the fields for a single practice card."""
     title_tag = practice.find("h2")
@@ -66,90 +85,21 @@ def parse_practice_card(practice: Tag) -> GoodPractice:
     link = title_tag.find("a")["href"] if title_tag and title_tag.find("a") else ""
     full_link = f"{BASE_DOMAIN}{link}" if link.startswith("/") else link or "N/A"
 
-    description_tag = practice.find(
-        "div",
-        class_="field-wrapper field field-node--field-cecon-abstract "
-        "field-name-field-cecon-abstract field-type-text-long field-label-hidden",
+    description = _select_text(practice, ".field-node--field-cecon-abstract")
+    organization = _select_text(
+        practice, ".field-node--field-cecon-organisation-company a"
     )
-    description = description_tag.get_text(strip=True) if description_tag else "N/A"
-
-    organization_tag = practice.find(
-        "div",
-        class_="field-wrapper field field-node--field-cecon-organisation-company "
-        "field-name-field-cecon-organisation-company field-type-link field-label-above",
+    type_of_org = _select_text(
+        practice, ".field-node--field-cecon-contributor-category a"
     )
-    organization = (
-        organization_tag.find("a").get_text(strip=True)
-        if organization_tag and organization_tag.find("a")
-        else "N/A"
+    country = _select_text(practice, ".field-node--field-cecon-country .field-item")
+    language = _select_text(
+        practice, ".field-node--field-cecon-main-language a"
     )
-
-    type_of_org_tag = practice.find(
-        "div",
-        class_="field-wrapper field field-node--field-cecon-contributor-category "
-        "field-name-field-cecon-contributor-category field-type-entity-reference field-label-above",
-    )
-    type_of_org = (
-        type_of_org_tag.find("a").get_text(strip=True)
-        if type_of_org_tag and type_of_org_tag.find("a")
-        else "N/A"
-    )
-
-    country_tag = practice.find(
-        "div",
-        class_="field-wrapper field field-node--field-cecon-country "
-        "field-name-field-cecon-country field-type-country field-label-above",
-    )
-    country = (
-        country_tag.find("div", class_="field-item").get_text(strip=True)
-        if country_tag
-        else "N/A"
-    )
-
-    language_tag = practice.find(
-        "div",
-        class_="field-wrapper field field-node--field-cecon-main-language "
-        "field-name-field-cecon-main-language field-type-entity-reference field-label-above",
-    )
-    language = (
-        language_tag.find("a").get_text(strip=True)
-        if language_tag and language_tag.find("a")
-        else "N/A"
-    )
-
-    key_area_tag = practice.find(
-        "div",
-        class_="field-wrapper field field-node--field-cecon-key-area "
-        "field-name-field-cecon-key-area field-type-entity-reference field-label-above",
-    )
-    key_area = (
-        ", ".join(a.get_text(strip=True) for a in key_area_tag.find_all("a"))
-        if key_area_tag
-        else "N/A"
-    )
-
-    sector_tag = practice.find(
-        "div",
-        class_="field-wrapper field field-node--field-cecon-sector "
-        "field-name-field-cecon-sector field-type-entity-reference field-label-above",
-    )
-    sector = (
-        ", ".join(a.get_text(strip=True) for a in sector_tag.find_all("a"))
-        if sector_tag
-        else "N/A"
-    )
-
-    scope_tag = practice.find(
-        "div",
-        class_="field-wrapper field field-node--field-cecon-scope "
-        "field-name-field-cecon-scope field-type-entity-reference field-label-above",
-    )
-    scope = (
-        ", ".join(a.get_text(strip=True) for a in scope_tag.find_all("a"))
-        if scope_tag
-        else "N/A"
-    )
-
+    key_area = _select_list_text(practice, ".field-node--field-cecon-key-area a")
+    sector = _select_list_text(practice, ".field-node--field-cecon-sector a")
+    scope = _select_list_text(practice, ".field-node--field-cecon-scope a")
+    
     return GoodPractice(
         title=title,
         description=description,
